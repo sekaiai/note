@@ -58,7 +58,8 @@ fs.readFile('/etc/passwd', (err, data) => {
 ```
 fs.readdir('./public/pixiv', (err, files) => {
    if(err) throw err;     
-    res.send(files) //["daily-20170417-1.json","daily-20170418-1.json","female-20170424-1.json"]
+    res.send(files) 
+    //["daily-20170417-1.json","daily-20170418-1.json","female-20170424-1.json"]
 })
 ```
 
@@ -102,6 +103,17 @@ fs.access('/etc/passwd', fs.constants.R_OK | fs.constants.W_OK, (err) => {
 * `fs.constants.R_OK` - `path` 文件可被调用进程读取。
 * `fs.constants.W_OK` - `path` 文件可被调用进程写入。
 * `fs.constants.X_OK` - `path` 文件可被调用进程执行。 对 `Windows` 系统没作用（相当于 `fs.constants.F_OK`）。
+* 
+### 添加文件夹
+```
+let $path = './public/pixiv/newfile/'
+try {
+    fs.accessSync($path, fs.constants.R_OK | fs.constants.W_OK)
+} catch (e) {
+    fs.mkdirSync($path, '0777')
+}
+```
+
 
 ## 加密解密 `crypto `
 `crypto` 模块提供了加密功能，包含对 OpenSSL 的哈希、HMAC、加密、解密、签名、以及验证功能的一整套封装。
@@ -292,3 +304,221 @@ req.session.user=user;
 req.session.destroy()      # 清空所有session
 req.session.key.destroy()    # 销毁名称为key的session的值
 ```
+
+### `var request = require('request')`
+```
+npm install --save request
+npm install --save request-promise
+```
+
+```
+const pixivision = (page) => {
+    let options = {
+        url: 'https://www.pixivision.net/zh/c/illustration?p=' + page,
+        headers: {
+            cookie: 'user_lang=zh'
+        }
+    }
+    console.time(url);
+    request(options, function (err, response, body) {
+        if (!err && response.statusCode == 200) {
+            console.timeEnd(url); // 通过time和timeEnd记录抓取url的时间
+            var $ = cheerio.load(body);
+            var data = [];
+            $('.main-column-container .article-card-container').each(function () {
+                var _this = $(this)
+                var tags = []
+                _this.find('.tls__list-item-container').each(function (index, el) {
+                    var _tag = $(this).children('a')
+                    tags.push({
+                        tag: _tag.attr('data-gtm-label'),
+                        id: _tag.attr('href').match(/\d+$/)[0]
+                    })
+                });
+                data.push({
+                    id: _this.find('.arc__title > a').attr('data-gtm-label'),
+                    title: _this.find('.arc__title > a').text(),
+                    tags: tags
+                })
+            })
+            var next = $('a.next').attr('href').match(/\d+$/)[0]
+            return {
+                data: data,
+                next: next
+            }
+        }
+    });
+}
+```
+
+### `var rp = require('request-promise');`
+
+```
+# https://github.com/request/request-promise
+const pixivision = (page) => {
+    let options = {
+        uri: 'https://www.pixivision.net/zh/c/illustration?p=' + page,
+        headers: {
+            cookie: 'user_lang=zh'
+        },
+        transform: function (body) {
+            return cheerio.load(body);
+        }
+    }
+    rp(options).then(($) => {
+        var data = []
+
+        $('.main-column-container .article-card-container').each( (i, el) => {
+            var _this = $(el);
+            let tags = []
+            _this.find('.tls__list-item-container').each(function (i, t) {
+                let _t = $(t).children('a')
+                tags.push({
+                    tag: _t.attr('data-gtm-label'),
+                    id: _t.attr('href').match(/\d+$/)[0]
+                })
+            });
+            data.push({
+                id: _this.find('.arc__title > a').attr('data-gtm-label'),
+                title: _this.find('.arc__title > a').text(),
+                tags: tags
+            })
+        })
+        var next = $('a.next').attr('href').match(/\d+$/)[0]
+        console.log({ data: data, next: next})
+        res.send({ data: data, next: next})
+    }).catch(err => {
+        console.log(`error: ${err}`)
+    })
+}
+```
+
+## `Node.js`  `async.parallelLimit` 与 `async.eachLimit`
+### `async.parallel`
+多个异步并行执行，当所有异步函数执行完成后执行回调函数，回到函数的参数为之前异步函数执行结果的数组，如果需要限制并行执行的数量可以使用`parallelLimit`
+```
+async.parallel([
+  function(callback) {
+    doAsync1(arg, callback);
+  },   
+  function(callback) {
+    doAsync2(arg, callback);
+  },
+  function(callback) {
+    doAsync3(arg, callback);
+  }
+], function(err, result) {
+  console.log(result);
+});
+```
+在线demo: [http://jsbin.com/mugixu/edit?js,console,output](http://jsbin.com/mugixu/edit?js,console,output)
+
+`async.parallelLimit` 方法接受两个参数，第一个参数为任务数组，每个任务是一个函数，第二个参数为每次并行执行的任务数，第三个参数为回调函数。使用 `async.parallelLimit` 完成发送邮件任务的思路是先使用数据与所要做的任务，组装成任务数组交给 `async.parallelLimit` 方法去执行。
+```
+let userEmailList = [ 'a@example.com', 'b@example.com', ..., 'z@example.com' ];
+let limit = 5;
+let taskList = userEmailList.map(function (email) {
+    return function (callback) {
+        sendEmail(email, function (error, result) {
+            return callback(error, result);
+        });
+    }
+});
+async.parallel(taskList, limit, function (error, result) {
+    console.log(error, result);
+});
+```
+
+`async.eachLimit` 方法接受四个参数，第一个参数为原始数据数组，第二个参数为每次并行处理的数据量，第三个参数为 `方法` 需要为数据进行的函数，第四个参数为回调函数。使用 `async.eachLimit` 完成发送邮件任务的思路是定义一个对数据进行处理的函数，然后使用 `async.eachLimit` 将处理函数应用所有数据上。  
+`async.each` 接受三个参数，比 `eachLimit` 少了第二个参数 `数量`。
+
+```
+let userEmailList = [ 'a@example.com', 'b@example.com', ..., 'z@example.com' ];
+let limit = 5;
+let processer = function (email) {
+    sendEmail(email, function (error) {
+        return callback(error, result);
+    });
+}
+async.eachLimit(userEmailList, limit, processer, function (error, result){
+    console.log(error);
+});
+```
+
+### `async.series`
+多个异步依次顺序执行。如果有异常抛出时就立即执行回调函数， 回调函数的`err`为抛出的异常；如果没有异常抛出，当所有异步函数完成后，执行成功回调函数，`err`值为`null`, `result` 为异步数组的结果数组
+```
+async.series([
+  function(callback) {
+    doAsync1(arg, callback);
+  },   
+  function(callback) {
+    doAsync2(arg, callback);
+  },
+  function(callback) {
+    doAsync3(arg, callback);
+  }
+], function(err, result) {
+  console.log(result);
+});
+```
+在线demo: [http://jsbin.com/sisasu/edit?js,console,output](http://jsbin.com/sisasu/edit?js,console,output)
+
+### `async.waterfall`
+多个异步依次顺序执行，且后面异步函数的依赖前面异步函数的输出
+```
+async.waterfall([
+  function(callback) {
+    doAsync1(2, callback);
+  },
+  function(arg, callback) {
+    doAsync2(arg, callback);
+  },
+  function(arg, callback) {
+    doAsync3(arg, callback);
+  }
+], function(err, result) {
+  console.log(result);
+});
+```
+在线demo: [http://jsbin.com/yozuje/edit?js,console,output](http://jsbin.com/yozuje/edit?js,console,output)
+
+## `whilst(test, iteratee, callback)`
+Repeatedly call `iteratee`, while `test` returns `true`. Calls `callback` when stopped, or an error occurs.
+[https://caolan.github.io/async/docs.html#whilst](https://caolan.github.io/async/docs.html#whilst)
+
+## `doWhilst(iteratee, test, callback)`
+同上，和`do while` 特性一样，先执行一次，再判断 `test` 
+
+
+## `redis`
+
+* https://www.npmjs.com/package/redis
+
+* https://github.com/NodeRedis/node_redis
+
+* [Redis使用与实践](https://segmentfault.com/a/1190000010675699)
+
+
+```
+var redis  = require("redis"),
+    client = redis.createClient(), multi;
+```
+
+`clinet.multi`
+
+`clinet.end`
+
+`clinet.rpush`
+
+`clinet.decr`
+
+`clinet.get`
+
+`clinet.set`
+
+`client.lpop`
+
+`incr `
+
+`decr`

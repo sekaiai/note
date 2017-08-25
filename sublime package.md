@@ -16,9 +16,23 @@ import urllib.request,os,hashlib; h = 'df21e130d211cfc94d9b0905775a7c0f' + '1e3d
 `markdown` 在 `sublime` 里面站着比较舒服 
 
 ## OmniMarkupPreviewer
-[https://github.com/timonwong/OmniMarkupPreviewer](https://github.com/timonwong/OmniMarkupPreviewer)  
+[https://github.com/timonwong/OmniMarkupPreviewer](https://github.com/timonwong/OmniMarkupPreviewer)
+
 用来预览 `markdown` 编辑的效果，同样支持渲染代码高亮的样式。
 
+如果出现 `404`
+
+Sublime Text > Preferences > Package Settings > OmniMarkupPreviewer > Settings - User
+
+paste the following to remove the strikeout package.
+```
+# https://stackoverflow.com/questions/35798823/omnimarkuppreviewer-404
+{
+    "renderer_options-MarkdownRenderer": {
+        "extensions": ["tables", "fenced_code", "codehilite"]
+    }
+}
+```
 __*shortcut*__
 
 * `Ctrl` + `Alt` + `O`: Preview Markup in Browser.
