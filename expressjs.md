@@ -13,13 +13,6 @@ $.html()
 //=> <h2 class="title welcome">Hello there!</h2>
 ```
 
-### SuperAgent
-superagent它是一个强大并且可读性很好的轻量级ajaxAPI，是一个关于HTTP方面的一个库，而且它可以将链式写法玩的出神入化。
-```
-# https://github.com/wangning0/Autumn_Ning_Blog/blob/master/blogs/3-19/superAgent_learn.md
-# https://github.com/visionmedia/superagent
-```
-
 
 ---
 type: nodejs
@@ -267,6 +260,18 @@ var admin = req.signedCookies.admin
 ```
 
 ## express-session
+```
+$ npm install express-session
+var session = require('express-session')
+
+app.use(session({
+  secret: 'keyboard cat',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true }
+}))
+
+```
 [node.js 中间件express-session使用详解](https://segmentfault.com/a/1190000010306099)
 
 ### 常用参数
@@ -504,6 +509,8 @@ Repeatedly call `iteratee`, while `test` returns `true`. Calls `callback` when s
 var redis  = require("redis"),
     client = redis.createClient(), multi;
 ```
+### FLUSHALL 
+删除全部
 
 `clinet.multi`
 
@@ -522,3 +529,23 @@ var redis  = require("redis"),
 `incr `
 
 `decr`
+
+
+## AXIOS
+```
+axios.request(config)
+
+axios.get(url[, config])
+
+axios.delete(url[, config])
+
+axios.head(url[, config])
+
+axios.options(url[, config])
+
+axios.post(url[, data[, config]])
+
+axios.put(url[, data[, config]])
+
+axios.patch(url[, data[, config]])
+```
